@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from yayan.config import CONFIG, ALIASES, model_path  # noqa: E402
 
 REQUIRED = [
-    ("YaYan_Reasoner",      True,  10_000,  "LLM (Qwen3-32B-AWQ ~19GB)"),
+    ("YaYan_Reasoner", True, 20_000, "LLM (Qwen3-14B BF16 ~28GB)"),
     ("YaYan_ASR_Mandarin",  True,     200,  "SenseVoiceSmall"),
     ("YaYan_ASR_Eastern",   True,     100,  "Dolphin-base"),
     ("YaYan_ASR_Global",    True,   1_000,  "Whisper-large-v3"),

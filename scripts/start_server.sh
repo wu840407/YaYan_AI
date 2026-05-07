@@ -12,7 +12,7 @@ export HF_DATASETS_OFFLINE=1
 export MODELSCOPE_OFFLINE=1
 export DO_NOT_TRACK=1
 export VLLM_NO_USAGE_STATS=1
-
+export AWQ_USE_TRITON=0
 export YAYAN_MODELS_ROOT="${YAYAN_MODELS_ROOT:-/data/ai_models}"
 export YAYAN_INPUT_DIR="${YAYAN_INPUT_DIR:-/data/input_audio}"
 export YAYAN_OUTPUT_DIR="${YAYAN_OUTPUT_DIR:-/data/output_text}"

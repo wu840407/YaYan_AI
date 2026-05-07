@@ -5,17 +5,17 @@
 models:
   # ============= LLM =============
   YaYan_Reasoner:
-    real_id: Qwen/Qwen3-32B-AWQ
-    local_dir: YaYan_Reasoner
+    real_id: Qwen/Qwen3-14B
+    local_dir: YaYan_Reasoner_14B   # ← 從 YaYan_Reasoner 改
     role: llm_general
     license: Apache-2.0
-    size_gb: 19
-    quantizable: false
-    note: "AWQ INT4 預量化；Turing 24GB 單卡剛好可載入"
+    size_gb: 28
+    quantizable: true               # ← 從 false 改 true
+    note: "BF16 原版，由 bitsandbytes 在載入時做 NF4 4-bit 量化"
 
   YaYan_Translator:
-    real_id: Qwen/Qwen3-32B-AWQ
-    local_dir: YaYan_Reasoner
+    real_id: Qwen/Qwen3-14B
+    local_dir: YaYan_Reasoner_14B   # ← 同步改
     role: llm_translate
     license: Apache-2.0
     size_gb: 0

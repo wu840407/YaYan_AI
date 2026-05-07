@@ -29,45 +29,53 @@ asr:
   enable_diarize: false
   default_alias: YaYan_ASR_Mandarin
   routing:
+    # ── 漢語方言（SenseVoice 中文最強）──
     zh: YaYan_ASR_Mandarin
     cmn: YaYan_ASR_Mandarin
     yue: YaYan_ASR_Mandarin
     wuu: YaYan_ASR_Mandarin
     cdo: YaYan_ASR_Mandarin
+    # ── 東亞（SenseVoice 也訓練了日韓）──
+    ja: YaYan_ASR_Mandarin
+    ko: YaYan_ASR_Mandarin
+    # ── 中亞 / 藏語 ──
     bo: YaYan_ASR_Eastern
     ug: YaYan_ASR_Eastern
+    # ── 中東 / 南亞 ──
     fa: YaYan_ASR_Global
     ur: YaYan_ASR_Global
+    ar: YaYan_ASR_Global
+    hi: YaYan_ASR_Global
+    # ── 歐洲（Whisper-large-v3）──
     en: YaYan_ASR_Global
+    fr: YaYan_ASR_Global
+    de: YaYan_ASR_Global
+    ru: YaYan_ASR_Global
+    es: YaYan_ASR_Global
+    # ── 東南亞（Whisper-large-v3）──
+    th: YaYan_ASR_Global
+    ms: YaYan_ASR_Global
+    vi: YaYan_ASR_Global
+    id: YaYan_ASR_Global
+    # ── 預設 ──
     auto: YaYan_ASR_Mandarin
 
 llm:
   alias: YaYan_Reasoner
-  # 後端三選一：
-  #   transformers - ★ 最穩、不需 JIT 編譯，當前 Turing 環境推薦
-  #   vllm         - in-process，會獨佔 CUDA_VISIBLE_DEVICES（不建議）
-  #   openai       - 由 start_server.sh 另起 vllm serve；需要 vllm 0.6.4.post1（單卡）
   backend: transformers
-
-  model_id: Qwen/Qwen3-32B-AWQ
-  quantization: awq                     # transformers 會從 config.json 自動偵測
-  dtype: float16                        # Turing 不支援 bfloat16
+  model_id: Qwen/Qwen3-14B          # ← 改
+  quantization: nf4                 # ← 從 awq 改 nf4（最關鍵）
+  dtype: float16
   max_new_tokens: 1024
   max_model_len: 4096
-
-  # 取樣
   do_sample: true
   temperature: 0.6
   top_p: 0.9
   top_k: 20
-  repetition_penalty: 1.05
-
-  # vllm in-process 專屬（backend != transformers 時才生效）
+  repetition_penalty: 1.05  
   gpu_memory_utilization: 0.85
-  enforce_eager: true                   # Turing 必開
-  tensor_parallel_size: 1               # 單卡，雙卡跑 ASR/LLM 隔離
-
-  # openai backend 專屬
+  enforce_eager: true
+  tensor_parallel_size: 1
   openai_base_url: "http://127.0.0.1:8001/v1"
   served_model_name: "YaYan_Reasoner"
 

@@ -13,12 +13,30 @@ logger = logging.getLogger("YaYan.LID")
 
 _LID_MODEL = None
 
+# VoxLingua107 偵測結果（ISO 639-1） → default.yaml 的 routing key
 LANG_TO_ROUTING = {
-    "zh": "zh", "cmn": "zh", "nan": "zh", "yue": "yue",
-    "wuu": "wuu", "cdo": "cdo",
-    "bo": "bo", "ug": "ug", "kk": "ug", "mn": "ug",
-    "fa": "fa", "ur": "ur",
-    "en": "en", "ja": "zh", "ko": "zh",
+    # ---- 漢語系 ----
+    "zh": "zh", "cmn": "zh", "nan": "zh",
+    "yue": "yue", "wuu": "wuu", "cdo": "cdo",
+    # ---- 東亞 ----
+    "ja": "ja", "ko": "ko",
+    # ---- 中亞 ----
+    "bo": "bo", "ug": "ug",
+    "kk": "ug",   # 哈薩克語就近走 Eastern
+    "mn": "ug",   # 蒙古語就近走 Eastern
+    # ---- 中東 / 南亞 ----
+    "fa": "fa", "ur": "ur", "ar": "ar", "hi": "hi",
+    "bn": "hi",   # 孟加拉語近似
+    # ---- 歐洲 ----
+    "en": "en", "fr": "fr", "de": "de", "ru": "ru", "es": "es",
+    "it": "fr",   # 沒專屬路由就近走法語（都歐洲）
+    "pt": "es",   # 葡萄牙語近似西班牙語
+    "nl": "de",   # 荷蘭語近似德語
+    "pl": "ru",   # 波蘭語近似俄語
+    "uk": "ru",   # 烏克蘭語走俄語
+    # ---- 東南亞 ----
+    "th": "th", "ms": "ms", "vi": "vi", "id": "id",
+    "tl": "ms",   # 菲律賓語就近走馬來語
 }
 
 

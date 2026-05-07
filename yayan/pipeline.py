@@ -65,7 +65,6 @@ def _get_llm() -> LlmClient:
 
 
 def warmup() -> None:
-    """預先載入主要模型，縮短第一次推論延遲。"""
     _get_llm()
     logger.info("YaYan-AI v4.5 warmup 完成。")
 
@@ -85,7 +84,6 @@ def transcribe_audio(
     use_vad: Optional[bool] = None,
     use_diarize: Optional[bool] = None,
 ) -> TranscriptionResult:
-    """完整 pipeline：辨識方言 → 轉錄 → 翻譯 → 正體中文。"""
     audio_cfg = CONFIG["audio"]
     asr_cfg = CONFIG["asr"]
     use_vad = asr_cfg["enable_vad"] if use_vad is None else use_vad
@@ -146,12 +144,14 @@ def transcribe_audio(
             continue
         speaker_label = _label_speaker((start + end) / 2, speakers) if speakers else "S0"
         if r.text:
+            # ★ ASR 階段就先過 OpenCC，這樣即使 LLM 失敗也是繁體
+            text_tw = to_taiwan_traditional(r.text)
             segments.append(
                 Segment(
                     start=start,
                     end=end,
                     speaker=speaker_label,
-                    raw_text=r.text,
+                    raw_text=text_tw,
                     asr_alias=r.asr_alias,
                     routing=r.routing,
                 )
@@ -162,7 +162,7 @@ def transcribe_audio(
         for s in segments
     ).strip()
 
-    # ---- LLM 翻譯 + OpenCC 後處理 ----
+    # ---- LLM 翻譯 + OpenCC ----
     translated = ""
     if raw_text:
         try:
@@ -170,7 +170,8 @@ def transcribe_audio(
             translated = llm.translate(raw_text, source_language=routing)
         except Exception as e:
             logger.exception(f"LLM 翻譯失敗: {e}")
-            translated = ""
+            # LLM 失敗時 fallback 用繁體 ASR 原文當譯文
+            translated = raw_text
         translated = to_taiwan_traditional(translated)
 
     return TranscriptionResult(
@@ -188,11 +189,6 @@ def refine_with_user_edit(
     user_edit: str,
     source_language: str = "zh",
 ) -> str:
-    """對話修改回環：使用者編輯後重新潤飾，不重做 ASR。
-
-    raw_text: 原始 ASR 文本（作為上下文參考）
-    user_edit: 使用者編輯後的內容（可能是原文，也可能是譯文）
-    """
     if not user_edit or not user_edit.strip():
         return ""
     raw_text = (raw_text or user_edit).strip()
@@ -207,7 +203,7 @@ def refine_with_user_edit(
         )
     except Exception as e:
         logger.exception(f"LLM refine 失敗: {e}")
-        return user_edit  # fallback：至少把使用者編輯過的內容回傳
+        return to_taiwan_traditional(user_edit)
 
     return to_taiwan_traditional(refined)
 

@@ -1,76 +1,64 @@
-"""YaYan_VAD — 語音活動偵測（Silero-VAD 包裝），所有外露名稱以 YaYan_VAD 為主。"""
+"""YaYan_VAD — silero-vad 5.x+ 改用 pip 內建權重，不再從 HF 下載。"""
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
 import torch
 
-from .config import CONFIG, model_path
+from .config import CONFIG
 
 logger = logging.getLogger("YaYan.VAD")
 
-_VAD_MODEL = None
-_VAD_UTILS = None
+_MODEL = None
 
 
-def _load() -> None:
-    global _VAD_MODEL, _VAD_UTILS
-    if _VAD_MODEL is not None:
-        return
-    local_dir = model_path("YaYan_VAD")
-    if not local_dir.exists():
-        raise FileNotFoundError(
-            f"YaYan_VAD 模型目錄不存在: {local_dir}\n"
-            "請先在連網機器執行 scripts/download_models.sh"
-        )
-    logger.info("載入 YaYan_VAD …")
-    _VAD_MODEL, _VAD_UTILS = torch.hub.load(
-        repo_or_dir=str(local_dir),
-        model="silero_vad",
-        source="local",
-        trust_repo=True,
-    )
+def _get_model():
+    global _MODEL
+    if _MODEL is not None:
+        return _MODEL
+    from silero_vad import load_silero_vad
+    _MODEL = load_silero_vad()  # ← pip 內建權重，不打網路
+    logger.info("silero-vad 載入完成（pip-bundled）")
+    return _MODEL
 
 
 def split_speech(
     audio: np.ndarray,
     sample_rate: int = 16000,
-    threshold: float = None,
-    max_chunk_seconds: float = None,
-    min_chunk_seconds: float = None,
 ) -> List[Tuple[float, float, np.ndarray]]:
-    """切分語音段落。回傳 [(start_sec, end_sec, chunk_array)]。"""
-    _load()
-    audio_cfg = CONFIG["audio"]
-    threshold = threshold or audio_cfg["vad_threshold"]
-    max_chunk_seconds = max_chunk_seconds or audio_cfg["max_chunk_seconds"]
-    min_chunk_seconds = min_chunk_seconds or audio_cfg["min_chunk_seconds"]
+    """切出語音段。回傳 [(start_sec, end_sec, chunk_audio), ...]。"""
+    from silero_vad import get_speech_timestamps
 
-    get_speech_timestamps = _VAD_UTILS[0]
-    audio_t = torch.from_numpy(audio).float()
+    cfg = CONFIG["audio"]
+    threshold = cfg.get("vad_threshold", 0.5)
+    min_dur = cfg.get("min_chunk_seconds", 0.5)
+    max_dur = cfg.get("max_chunk_seconds", 30)
+    pad = cfg.get("pad_seconds", 0.2)
+
+    model = _get_model()
+    waveform = torch.from_numpy(audio).float()
+
     timestamps = get_speech_timestamps(
-        audio_t,
-        _VAD_MODEL,
+        waveform,
+        model,
         sampling_rate=sample_rate,
         threshold=threshold,
-        max_speech_duration_s=max_chunk_seconds,
-        min_speech_duration_ms=int(min_chunk_seconds * 1000),
+        min_speech_duration_ms=int(min_dur * 1000),
+        max_speech_duration_s=max_dur,
+        speech_pad_ms=int(pad * 1000),
+        return_seconds=False,  # 用 sample 為單位
     )
 
-    if not timestamps:
-        logger.warning("VAD 未偵測到語音段落，回傳整段。")
-        return [(0.0, len(audio) / sample_rate, audio)]
-
     chunks: List[Tuple[float, float, np.ndarray]] = []
-    pad = int(audio_cfg.get("pad_seconds", 0.2) * sample_rate)
     for ts in timestamps:
-        start = max(0, ts["start"] - pad)
-        end = min(len(audio), ts["end"] + pad)
-        chunks.append(
-            (start / sample_rate, end / sample_rate, audio[start:end])
-        )
-    logger.info(f"VAD 切出 {len(chunks)} 段語音。")
+        s, e = int(ts["start"]), int(ts["end"])
+        chunks.append((s / sample_rate, e / sample_rate, audio[s:e]))
+
+    if not chunks:
+        # 整段都沒檢測到語音，當作一整段送
+        chunks = [(0.0, len(audio) / sample_rate, audio)]
+    
+    logger.info(f"VAD 切出 {len(chunks)} 段")
     return chunks

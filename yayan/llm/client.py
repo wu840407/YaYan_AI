@@ -71,17 +71,24 @@ class LlmClient:
             torch_dtype=torch.float16,  # Turing 不支援 bfloat16
         )
 
-        if quant in ("awq", "gptq"):
-            # 預量化模型：transformers 會從 config.json 自動偵測
+        if quant == "awq":
+            # ★ 強制改走 GEMV（純 CUDA）路徑，避開 Turing 不支援的 triton 3.0 API
+            from transformers import AwqConfig
+            load_kwargs["quantization_config"] = AwqConfig(
+                bits=4,
+                version="gemv",        # 不要用 gemm（會走 triton）
+                zero_point=True,
+                group_size=128,
+                do_fuse=False,         # 關掉 fused kernel，更穩
+            )
+        elif quant == "gptq":
             pass
         elif quant in ("4bit", "nf4"):
-            # 動態 NF4 量化：給未量化的 BF16/FP16 模型用
             load_kwargs["quantization_config"] = BitsAndBytesConfig(
                 load_in_4bit=True,
                 bnb_4bit_quant_type="nf4",
                 bnb_4bit_compute_dtype=torch.float16,
             )
-        # quant 為空 → 全精度 FP16 載入（24GB 卡裝不下 32B，僅 14B 以下適用）
 
         self._model = AutoModelForCausalLM.from_pretrained(
             str(self.local_dir), **load_kwargs
