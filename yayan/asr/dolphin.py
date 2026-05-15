@@ -1,4 +1,8 @@
-"""YaYan_ASR_Dialect — Dolphin-CN-Dialect 包裝。"""
+"""YaYan_ASR_Dialect — Dolphin-CN-Dialect 包裝。
+
+對應 Dolphin SDK 真實接受的 lang_sym + region_sym（從 languages.md 修正）。
+注意：Dolphin 用自己的命名（zh-SICHUAN、ct-HK 等），不是 ISO 639。
+"""
 from __future__ import annotations
 
 import logging
@@ -18,34 +22,57 @@ logger = logging.getLogger("YaYan.ASR.Dolphin")
 
 _MODEL = None
 
+# ★ 修正：使用 Dolphin 官方 languages.md 的 region 命名
+# (lang_sym, region_sym) - region 可為 None（讓模型自動判）
 ROUTING_TO_DOLPHIN: dict = {
-    "zh":    ("zh", "CN"),
-    "cmn":   ("zh", "CN"),
-    "yue":   ("yue", "CN"),
-    "wuu":   ("wuu", "CN"),
-    "wuu-sz":("wuu", "CN-SZ"),
-    "wuu-nb":("wuu", "CN-NB"),
-    "wuu-wz":("wuu", "CN-WZ"),
-    "nan":   ("nan", "CN"),
-    "nan-cs":("nan", "CN-CS"),
-    "nan-hn":("nan", "CN-HN"),
-    "cdo":   ("cdo", "CN"),
-    "hak":   ("hak", "CN"),
-    "hsn":   ("hsn", "CN"),
-    "gan":   ("gan", "CN"),
-    "cjy":   ("cjy", "CN"),
-    "cmn-sw":("zh", "CN-SC"),
-    "cmn-sd":("zh", "CN-SD"),
-    "cmn-ne":("zh", "CN-NE"),
-    "cmn-zy":("zh", "CN-ZY"),
-    "cmn-wh":("zh", "CN-WH"),
-    "cmn-xa":("zh", "CN-XA"),
-    "cmn-lz":("zh", "CN-LZ"),
-    "cmn-jh":("zh", "CN-JH"),
-    "bo":    ("bo", "CN"),
-    "ug":    ("ug", "CN"),
-    "min":   ("nan", "CN"),
-    "hokkien":("nan", "CN"),
+    # ── 漢語方言（lang_sym=zh，region 是省份）──
+    "zh":     ("zh", "CN"),
+    "cmn":    ("zh", "CN"),
+    "cmn-tw": ("zh", "TW"),
+    # 北方官話
+    "cmn-ne": ("zh", "LIAONING"),    # 東北話（用遼寧代表）
+    "cmn-sd": ("zh", "SHANDONG"),    # 山東話
+    "cmn-zy": ("zh", "HENAN"),       # 河南話
+    "cmn-xa": ("zh", "SHAANXI"),     # 西安話（陝西）
+    "cmn-lz": ("zh", "GANSU"),       # 蘭州話（甘肅）
+    "cmn-tj": ("zh", "TIANJIN"),     # 天津話
+    "cmn-hb": ("zh", "HEBEI"),       # 河北
+    "cmn-nx": ("zh", "NINGXIA"),     # 寧夏
+    "cmn-sx": ("zh", "SHANXI"),      # 山西
+    "cmn-ah": ("zh", "ANHUI"),       # 安徽
+    # 西南官話
+    "cmn-sw": ("zh", "SICHUAN"),     # 四川話
+    "cmn-yn": ("zh", "YUNNAN"),      # 雲南話
+    "cmn-hb2":("zh", "HUBEI"),       # 湖北話（武漢）
+    "cmn-wh": ("zh", "HUBEI"),       # 武漢話 → 湖北
+    # 江淮官話（南京話沒專屬 → 走 zh-CN）
+    "cmn-jh": ("zh", "CN"),
+    # 吳語
+    "wuu":    ("zh", "WU"),          # 吳語通用
+    "wuu-sz": ("zh", "WU"),          # 蘇州話 → 吳語
+    "wuu-nb": ("zh", "WU"),          # 寧波話 → 吳語
+    "wuu-wz": ("zh", "WENZHOU"),     # 溫州話有專屬
+    "wuu-sh": ("zh", "SHANGHAI"),    # 上海話
+    # 粵語（lang_sym=ct，不是 yue）
+    "yue":    ("ct", "NULL"),        # 粵語通用
+    "yue-hk": ("ct", "HK"),          # 香港粵語
+    "yue-gz": ("ct", "GZ"),          # 廣州粵語
+    # 閩語
+    "nan":    ("zh", "MINNAN"),      # 閩南語/台語
+    "nan-tw": ("zh", "MINNAN"),
+    "nan-cs": ("zh", "MINNAN"),      # 潮汕話 → 閩南
+    "nan-hn": ("zh", "MINNAN"),      # 海南話 → 閩南
+    "cdo":    ("zh", "FUJIAN"),      # 福州話（閩東）→ 福建
+    "min":    ("zh", "MINNAN"),
+    "hokkien":("zh", "MINNAN"),
+    # 客家、湘、贛、晉（沒專屬 region → 走 zh-CN 讓模型自動判）
+    "hak":    ("zh", "GUANGDONG"),   # 客家就近用廣東（部分客家在廣東）
+    "hsn":    ("zh", "HUNAN"),       # 湘語 → 湖南
+    "gan":    ("zh", "CN"),          # 贛語沒專屬
+    "cjy":    ("zh", "SHANXI"),      # 晉語 → 山西
+    # 中亞
+    "bo":     ("zh", "CN"),          # 藏語在 zh family
+    "ug":     ("ug", "CN"),          # 維吾爾語
 }
 
 
@@ -116,22 +143,45 @@ def transcribe(
         else:
             audio_input = audio
 
-        lang_sym, region_sym = ROUTING_TO_DOLPHIN.get(
-            (language_hint or "auto").lower(), (None, None)
-        )
+        # 取 lang_sym + region_sym（unknown routing → 不傳，讓 Dolphin 自動判）
+        mapping = ROUTING_TO_DOLPHIN.get((language_hint or "auto").lower())
         kwargs = {}
-        if lang_sym:
+        if mapping:
+            lang_sym, region_sym = mapping
             kwargs["lang_sym"] = lang_sym
-        if region_sym:
-            kwargs["region_sym"] = region_sym
+            if region_sym and region_sym not in ("NULL", "AUTO"):
+                kwargs["region_sym"] = region_sym
+        # else: 不傳 lang_sym/region_sym，Dolphin 走全自動
+
         if enable_word_timestamp:
             kwargs["predict_time"] = True
 
-        try:
-            result = dolphin.transcribe(model, audio_input, **kwargs)
-        except TypeError:
-            kwargs.pop("predict_time", None)
-            result = dolphin.transcribe(model, audio_input, **kwargs)
+        # 退化策略：region 不認 → 去掉 region 重試
+        for retry in range(3):
+            try:
+                result = dolphin.transcribe(model, audio_input, **kwargs)
+                break
+            except TypeError:
+                kwargs.pop("predict_time", None)
+            except Exception as e:
+                emsg = str(e)
+                if "Unsupported language or region" in emsg and "region_sym" in kwargs:
+                    logger.warning(
+                        f"Dolphin 不支援 region={kwargs['region_sym']}，去掉 region 重試"
+                    )
+                    kwargs.pop("region_sym", None)
+                    continue
+                elif "Unsupported language or region" in emsg and "lang_sym" in kwargs:
+                    logger.warning(
+                        f"Dolphin 不支援 lang={kwargs['lang_sym']}，全自動模式重試"
+                    )
+                    kwargs.pop("lang_sym", None)
+                    continue
+                else:
+                    raise
+        else:
+            logger.error(f"Dolphin 連續失敗")
+            return DolphinResult(text="", words=[])
 
     except Exception as e:
         logger.error(f"Dolphin 推論失敗 (lang={language_hint}): {e}")
@@ -191,18 +241,8 @@ def transcribe(
 
 
 def _strip_special_tokens(text: str) -> str:
-    """移除 Dolphin 各種特殊 token。
-
-    Dolphin 的 token 格式有四種：
-      <|...|>               例如 <|zh|>, <|nospeech|>
-      <CN>                  地區（大寫）
-      <notimestamp>         長 token（11+ 字）
-      <0.50>                時間戳數字
-    """
-    # <|...|>
+    """移除 Dolphin 各種特殊 token：<|...|>, <CN>, <notimestamp>, <0.50> 等。"""
     text = re.sub(r"<\|[^|]*\|>", "", text)
-    # <Xxx> (任意字母數字)
     text = re.sub(r"<[A-Za-z][A-Za-z0-9_-]*>", "", text)
-    # <0.50> 數字時間戳
     text = re.sub(r"<\d+(?:\.\d+)?>", "", text)
     return text.strip()
