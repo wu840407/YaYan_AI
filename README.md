@@ -141,7 +141,7 @@ hf download Qwen/Qwen2.5-7B-Instruct \
 ### 2. 建立環境
 
 ```bash
-git clone https://github.com/YourUsername/YaYan-AI.git
+git clone https://github.com/wu840407/YaYan-AI.git
 cd YaYan-AI
 
 conda create -n yayan_ai python=3.10 -y
