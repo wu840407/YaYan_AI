@@ -70,7 +70,7 @@ flowchart LR
 | Component | Spec |
 |---|---|
 | OS | Ubuntu 22.04+ |
-| GPU | 2× NVIDIA — supported profiles: **RTX 4000 Ada 20 GB** (`app_rtx4000.py`) · **RTX 6000 24 GB** (`app_rtx6000.py`) |
+| GPU | 2× NVIDIA — primary: **RTX 6000 24 GB** (`app_rtx6000.py`) · also supported: **RTX 4000 Ada 20 GB** (`app_rtx4000.py`) |
 | Driver / CUDA | 535+ / CUDA 12.1 |
 | Python | 3.10 |
 | Disk | ~50 GB (models ≈ 19 GB + workspace) |
@@ -90,8 +90,8 @@ bash scripts/download_models.sh
 python scripts/verify_models.py
 
 # Launch — pick the profile matching your GPUs
-python app_rtx4000.py     # dual RTX 4000 Ada → Gradio UI on http://localhost:7860
-python app_rtx6000.py     # dual RTX 6000
+python app_rtx6000.py     # dual RTX 6000 (primary) → Gradio UI on http://localhost:7860
+python app_rtx4000.py     # dual RTX 4000 Ada
 
 # Batch mode
 bash scripts/start_batch.sh
