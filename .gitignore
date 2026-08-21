@@ -97,3 +97,6 @@ deploy/新文字文件.txt
 
 # Claude 制度檔（含內部脈絡，勿入庫）
 .claude/
+
+# 外部 clone 的第三方推論程式碼（不進 git）
+third_party/
