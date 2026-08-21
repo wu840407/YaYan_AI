@@ -591,9 +591,20 @@ CSS = """
 """
 
 
+# 離線內網部署：主題字型一律用系統內建字型，不可用 GoogleFont。
+# Gradio 預設主題的 Montserrat / IBM Plex Mono 會讓前端動態注入
+# fonts.googleapis.com 的 stylesheet，外網不通時要等逾時才放棄，
+# 表現為「第一次進站一直轉圈圈、之後就正常」。
+THEME = gr.themes.Soft(
+    font=["system-ui", "-apple-system", "Segoe UI", "Microsoft JhengHei",
+          "PingFang TC", "Noto Sans TC", "sans-serif"],
+    font_mono=["ui-monospace", "Consolas", "Menlo", "monospace"],
+)
+
+
 def build_ui() -> gr.Blocks:
     rag_on = CONFIG.get("rag", {}).get("enable_rag", False)  # M3：術語庫總開關
-    with gr.Blocks(title=f"YaYan-AI v{__version__}", css=CSS, theme=gr.themes.Soft()) as demo:
+    with gr.Blocks(title=f"YaYan-AI v{__version__}", css=CSS, theme=THEME) as demo:
         gr.Markdown(
             f"""
             # 🏺 YaYan-AI **v{__version__}**　— 多語言語音轉錄系統
