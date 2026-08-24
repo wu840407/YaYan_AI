@@ -474,7 +474,12 @@ def transcribe_audio(
         except Exception as e:
             logger.warning(f"聲紋識別失敗，退回 A/B/C: {e}")
 
-    from . import lid as _lid_mod
+    # LID backend：voxlingua（預設，維持既有行為）或 firered（能分漢語方言）
+    _lid_backend = str(asr_cfg.get("lid_backend", "voxlingua")).lower()
+    if _lid_backend == "firered":
+        from . import lid_firered as _lid_mod
+    else:
+        from . import lid as _lid_mod
     enable_lid = asr_cfg["enable_lid"]
     seg_routings: List[Tuple[str, float, str]] = []
 
@@ -484,6 +489,11 @@ def transcribe_audio(
         lid_context_sec = float(asr_cfg.get("lid_context_sec", 1.5))
         # v4.7-B：LID Ensemble（VoxLingua107 + Whisper 投票，可由 config 關閉）
         use_ensemble = asr_cfg.get("enable_lid_ensemble", False)
+        if use_ensemble and _lid_backend == "firered":
+            # Whisper LID 對漢語只回 zh，會把 firered 判出的方言票投回通用中文，
+            # 等於抵消本 backend 的唯一價值。
+            logger.info("lid_backend=firered，強制關閉 LID ensemble")
+            use_ensemble = False
         _lid_whisper = None
         if use_ensemble:
             from . import lid_whisper as _lid_whisper

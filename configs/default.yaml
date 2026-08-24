@@ -28,6 +28,15 @@ asr:
   enable_lid_context: true       # v4.7-A：逐段 LID 借前後 context（短段信心提升）
   lid_context_sec: 1.5           # v4.7-A：LID 時前後各向完整音檔借的秒數
   enable_lid_ensemble: false     # v4.7-B：VoxLingua107 + Whisper LID 投票（預設關，待 baseline 驗證後再開）
+  # LID backend：voxlingua（預設，維持既有行為）| firered（能分閩/粵/吳/湘/西南官話）
+  # voxlingua 對整個漢語只有一個 "Chinese" 標籤，自動模式下台語永遠走不到專用 ASR；
+  # firered 實測台語 94%、粵語 92%（Common Voice），電話頻寬模擬只掉約 3 個百分點。
+  # ⚠️ 切到 firered 時 ensemble 會被強制關閉（Whisper LID 會把方言票投回通用中文）。
+  # ⚠️ 標籤集沒有維吾爾語/贛語/客家話，那三者永遠判不出來。
+  lid_backend: voxlingua
+  firered_repo_dir: /data/AI_Project/third_party/FireRedASR2S
+  firered_lid_dir: /data/ai_models/YaYan_LID_Dialect
+  firered_lid_half: false        # Turing 無 bf16；fp16 可開但未驗證，預設 fp32
   enable_asr_hotwords: false    # ★ 預設 false：不做術語偏置，ASR 行為與既有完全相同
   # Dolphin 判出 region=MINNAN 時改交台語專用 ASR 重跑。
   # 存在理由：VoxLingua107 標籤集沒有閩南語，自動模式永遠判不出台語。
