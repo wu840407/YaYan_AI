@@ -1,7 +1,7 @@
 # YaYan-AI 主設定檔
 project:
   name: YaYan-AI
-  version: "5.2.0"
+  version: "5.2.1"
   edition: "RTX6000-Server"
 
 paths:

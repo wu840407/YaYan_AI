@@ -609,7 +609,7 @@ def build_ui() -> gr.Blocks:
         gr.Markdown(
             f"""
             # 🏺 YaYan-AI **v{__version__}**　— 多語言語音轉錄系統
-            <p class="yayan-sub">Edition: RTX6000-Server　|　雅言 YaYan 自主研發語音辨識模型　|　逐段 LID + 5 人說話人分離 + 字級時間戳</p>
+            <p class="yayan-sub">Edition: RTX6000-Server　|　雅言 YaYan 自主研發語音辨識模型　|　方言自動辨識 + 5 人說話人分離 + 字級時間戳</p>
             """
         )
 
