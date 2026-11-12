@@ -1,0 +1,105 @@
+# --- AI 模型權重（絕對不能上傳）---
+models_cache/
+ai_models/
+/data/
+*.pt
+*.bin
+*.safetensors
+*.engine
+*.onnx
+
+# --- 離線打包 ---
+offline_packages/
+*.whl
+*.tar.gz
+
+# --- 測試資料（隱私）---
+input_audio/
+output_text/
+yayan_logs/
+yayan_cache/
+
+# --- Docker 產出 ---
+docker/yayan-ai-*.tar
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+.env
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+# 模型權重（從外部下載）
+/data/ai_models/
+
+# 執行階段產物
+/data/input_audio/
+/data/output_text/
+/data/yayan_logs/
+/data/yayan_cache/
+/data/vllm_serve.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# 環境變數 / 密鑰
+.env
+*.pem
+*.key
+*.pfx
+*.cer
+*.crt
+
+# Conda
+.conda/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# v4.6 補充
+/data/
+ai_models/
+yayan_logs/
+*.gguf
+*.bin.bak
+*.safetensors.bak
+
+# v4.6 補充
+/data/
+ai_models/
+yayan_logs/
+*.gguf
+*.bin.bak
+*.safetensors.bak
+
+CLAUDE.md
+
+# 部署暫存筆記（含內部主機名的執行紀錄，勿入庫）
+deploy/新文字文件.txt
+
+# Claude 制度檔（含內部脈絡，勿入庫）
+.claude/
+
+# 外部 clone 的第三方推論程式碼（不進 git）
+third_party/
+
+# --- 部署端本機覆寫（不公開；提示詞等，見 yayan/config.py LOCAL_PROMPTS_DIR）---
+configs/local/

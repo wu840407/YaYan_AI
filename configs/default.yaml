@@ -1,0 +1,231 @@
+# YaYan-AI 主設定檔
+project:
+  name: YaYan-AI
+  version: "5.4.0"
+  edition: "RTX6000-Server"
+
+paths:
+  models_root: /data/ai_models
+  input_dir: /data/input_audio
+  output_dir: /data/output_text
+  cache_dir: /data/yayan_cache
+  log_dir: /data/yayan_logs
+
+devices:
+  asr_gpu: "cuda:0"
+  llm_gpu: "cuda:1"
+
+audio:
+  sample_rate: 16000
+  vad_threshold: 0.5
+  max_chunk_seconds: 30
+  min_chunk_seconds: 0.5
+  pad_seconds: 0.2
+
+asr:
+  enable_vad: true
+  enable_lid: true
+  enable_lid_context: true       # v4.7-A：逐段 LID 借前後 context（短段信心提升）
+  lid_context_sec: 1.5           # v4.7-A：LID 時前後各向完整音檔借的秒數
+  enable_lid_ensemble: false     # v4.7-B：VoxLingua107 + Whisper LID 投票（預設關，待 baseline 驗證後再開）
+  # LID backend：voxlingua（預設，維持既有行為）| firered（能分閩/粵/吳/湘/西南官話）
+  # voxlingua 對整個漢語只有一個 "Chinese" 標籤，自動模式下台語永遠走不到專用 ASR；
+  # firered 實測台語 94%、粵語 92%（Common Voice）。
+  # ⚠️ 切到 firered 時 ensemble 會被強制關閉（Whisper LID 會把方言票投回通用中文）。
+  # ⚠️ 標籤集沒有維吾爾語/贛語/客家話，那三者永遠判不出來。
+  lid_backend: voxlingua
+  firered_repo_dir: /data/AI_Project/third_party/FireRedASR2S
+  firered_lid_dir: /data/ai_models/YaYan_LID_Dialect
+  firered_lid_half: false        # Turing 無 bf16；fp16 可開但未驗證，預設 fp32
+  # 兩步判定（只在 lid_backend: firered 時有意義）：1-best 判成容易與粵/閩混淆的外語
+  # （越南語、緬甸語、泰語…），但「強制漢語後的方言分佈」很篤定時，改採方言結果。
+  # 低取樣率語音逐段實測：閩南語依時長命中 66%→77%、上海話 55%→63%、
+  # 粵語 71%→79%；國語、四川話變動在 ±1.5 個百分點內。
+  # ⚠️ 實測不可開：公開語料的越南語/泰語/寮語/緬甸語有 5~9 成會被誤救成漢語方言（門檻調高也無解）。
+  #    保留開關供後續「以整段錄音為單位的先驗」實驗對照，正式環境請維持 false。
+  firered_lid_rescue: false
+  firered_lid_rescue_min_prob: 0.8   # 強制漢語後最高方言機率的門檻
+  # firered_lid_rescue_from: [vi, my, th, lo, yo, haw, so, jw, su, war]   # 會被救回的 1-best 語言
+  # 整段先驗（只在 lid_backend: firered 且來源語言為自動偵測時有作用）：
+  # 逐段判定在低取樣率語音的短片段上不穩；改以整段錄音為單位——這段錄音已有足夠多的片段判成漢語時，
+  # 其餘被判成非常見外語的片段視為漢語，方言則由該段與整段錄音的分佈合起來決定。
+  # 端到端涵蓋率整體 0.348 → 0.361；用公開語料的越南語/泰語/緬甸語/寮語/高棉語合成的
+  # 多句錄音（每段 2、3、10 句三種長度，共 1,100 段）沒有任何一段被改判成漢語。
+  # ⚠️ 已知取捨：同一段錄音裡若漢語占一成五以上、又真的夾雜 keep 清單外的外語
+  #    （例如漢語與越南語交談），外語片段會被當成漢語方言辨識，使用者看不到警示。
+  #    這類錄音請手動指定來源語言，或把該語言加進 lid_call_prior_keep。
+  lid_call_prior: false            # ★ 預設 false：逐段判定行為與既有相同
+  lid_call_prior_min_share: 0.15   # 漢語片段占整段錄音語音時長的比例門檻
+  lid_call_prior_min_sec: 8.0      # 漢語片段的最少秒數
+  lid_call_prior_min_segments: 2   # 漢語片段的最少段數（單獨一段誤判不足以翻轉整段錄音）
+  lid_call_prior_beta: 1.0         # 整段錄音方言分佈的權重（0＝方言只看該段自己）
+  # lid_call_prior_keep: [en, ja, ko, fr, de, ru, es, ar, fa, ur, hi, bo, ug]   # 不會被改判的外語（以 routing 比對）
+  enable_asr_hotwords: false    # ★ 預設 false：不做術語偏置，ASR 行為與既有完全相同
+  # Dolphin 判出 region=MINNAN 時改交台語專用 ASR 重跑。
+  # 存在理由：VoxLingua107 標籤集沒有閩南語，自動模式永遠判不出台語。
+  # 逐字稿明顯不成句時，在 UI 提示「可能語言選錯」。只提示，不自動換引擎。
+  enable_quality_hint: false
+  # 逐字稿可能不完整時提醒使用者：有段落辨識失敗（例如 GPU 記憶體不足）、偵測到語音卻幾乎沒有
+  # 文字、重複輸出被截斷、譯文產生失敗。沒有這個提醒時，這些情況只會得到看似正常的殘缺逐字稿。
+  enable_failure_notice: false   # ★ 預設 false：不顯示提醒，介面與既有相同
+  # 辨識模型陷入迴圈（同一片段連續重複 5 次以上，且重複的內容合計 50 字以上）時截短。
+  # 內容有一半以上是數字的片段（數字的逐位報讀）一律不動。
+  enable_repetition_guard: false # ★ 預設 false：不改動辨識輸出
+  enable_minnan_redirect: false
+  enable_taigi_asr: true         # v4.7-C：台語(nan)改走專用 Breeze-ASR-26（已離線放入權重並驗證；缺失自動退回 Dolphin）
+  taigi_routings: [nan, nan-cs, nan-hn]   # v4.7-C：觸發台語專用 ASR 的 routing key
+  # 強制改走 Whisper 的 routing key（Dolphin-small 覆蓋不佳的語種逃生門）。
+  # repo 預設空＝行為不變。實測建議值：[yue, yue-hk, yue-gz, bo]
+  force_whisper_routings: []
+  enable_diarize: true
+  default_alias: YaYan_ASR_Dialect
+  routing:
+    zh: YaYan_ASR_Dialect
+    cmn: YaYan_ASR_Dialect
+    cmn-ne: YaYan_ASR_Dialect
+    cmn-sd: YaYan_ASR_Dialect
+    cmn-zy: YaYan_ASR_Dialect
+    cmn-xa: YaYan_ASR_Dialect
+    cmn-lz: YaYan_ASR_Dialect
+    cmn-sw: YaYan_ASR_Dialect
+    cmn-wh: YaYan_ASR_Dialect
+    cmn-jh: YaYan_ASR_Dialect
+    yue: YaYan_ASR_Dialect
+    wuu: YaYan_ASR_Dialect
+    wuu-sz: YaYan_ASR_Dialect
+    wuu-nb: YaYan_ASR_Dialect
+    wuu-wz: YaYan_ASR_Dialect
+    nan: YaYan_ASR_Dialect
+    nan-cs: YaYan_ASR_Dialect
+    nan-hn: YaYan_ASR_Dialect
+    cdo: YaYan_ASR_Dialect
+    hak: YaYan_ASR_Dialect
+    hsn: YaYan_ASR_Dialect
+    gan: YaYan_ASR_Dialect
+    cjy: YaYan_ASR_Dialect
+    min: YaYan_ASR_Dialect
+    hokkien: YaYan_ASR_Dialect
+    bo: YaYan_ASR_Dialect
+    ug: YaYan_ASR_Dialect
+    ja: YaYan_ASR_Global
+    ko: YaYan_ASR_Global
+    fa: YaYan_ASR_Global
+    ur: YaYan_ASR_Global
+    ar: YaYan_ASR_Global
+    hi: YaYan_ASR_Global
+    en: YaYan_ASR_Global
+    fr: YaYan_ASR_Global
+    de: YaYan_ASR_Global
+    ru: YaYan_ASR_Global
+    es: YaYan_ASR_Global
+    th: YaYan_ASR_Global
+    ms: YaYan_ASR_Global
+    vi: YaYan_ASR_Global
+    id: YaYan_ASR_Global
+    auto: YaYan_ASR_Dialect
+
+llm:
+  alias: YaYan_Reasoner
+  backend: transformers
+  model_id: "Qwen/Qwen3-14B"
+  quantization: nf4
+  dtype: float16
+  max_new_tokens: 2048           # ★ 從 1024 提到 2048（每批 30 行夠用，且不會慢太多）
+  max_model_len: 8192            # ★ 從 4096 提到 8192
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.9
+  top_k: 20
+  repetition_penalty: 1.05
+  gpu_memory_utilization: 0.85
+  enforce_eager: true
+  tensor_parallel_size: 1
+  openai_base_url: "http://127.0.0.1:8001/v1"
+  served_model_name: "YaYan_Reasoner"
+  # M4：openai backend 對接的 server 種類。vllm（預設，維持既有行為）| llamacpp
+  # 只在 backend: openai 時生效；backend: transformers 時完全不讀。
+  openai_flavor: vllm
+
+diarize:
+  enabled: true
+  min_speakers: 1
+  max_speakers: 5
+
+# V5.0 M2：聲紋語者識別（預設關，不影響現有 A/B/C 行為）
+speaker_id:
+  enable_speaker_id: false         # ★ 預設 false：轉錄時不做自動識別，行為與 v4.7 完全相同
+  embedding_dim: 256               # wespeaker resnet34 實測維度（建表 vector(N) 用）
+  db:
+    host: localhost
+    port: 5432
+    dbname: yayan_voiceprint
+    user: yayan
+    password_env: YAYAN_VP_DB_PASSWORD   # ★ 實際密碼一律走此環境變數（勿把密碼寫進本檔）
+    password_default: ""                 # 不存實密於 git；本機/正式皆 export YAYAN_VP_DB_PASSWORD
+  threshold_high: 0.70             # similarity ≥ → 標姓名 [張三 ...]
+  threshold_mid: 0.55              # similarity ≥ → 標「疑似_張三(0.65)」，以下退回 A方
+  top_k: 5                         # 相似度搜尋取前 k 筆
+  hnsw_ef_search: 100              # HNSW 查詢 ef_search（越大越準越慢）
+  # ★ 預設 false：辨識不出就用 A/B/C 匿名標籤，不自動建檔。
+  # 自動建檔的佔位項會被當成正常語者比對命中，把佔位字串寫進逐字稿；
+  # 語者請改由「語者管理」分頁上傳音檔人工建檔。
+  enroll_unknown: false
+
+# V5.0 M3：特殊字詞 RAG 術語庫（只在 prompt 層注入，不碰 LLM 後端）
+rag:
+  enable_rag: false                # ★ 預設 false：不檢索、不注入，翻譯 prompt 與既有逐字相同
+  max_inject_terms: 20             # 每批最多注入幾條術語（避免稀釋 LLM 注意力）
+  max_asr_hotwords: 50             # ASR hotword 偏置最多取幾條（太多會稀釋偏置效果）
+  enable_asr_correction: false     # ★ 預設 false：不做 ASR 後處理術語替換，逐字稿與既有相同
+  enable_fuzzy: true               # 是否做模糊比對（difflib，無需 DB extension）
+  fuzzy_threshold: 0.86            # 模糊命中相似度門檻（0~1，越高越嚴）
+  fuzzy_min_len: 2                 # 術語正規化長度 < 此值不做模糊（避免單字亂配）
+  # 疑似專名誤植提示：只對 proper_noun 套用較鬆門檻，只提示不替換。
+  # ⚠️ 0.60 會讓「王建華」與「王建國」互相命中，開啟前請確認可接受。
+  enable_name_fuzzy_hint: false
+  name_fuzzy_threshold: 0.60
+  max_name_hints: 10
+  db:                              # 沿用 M2 的 yayan_voiceprint DB，新增 glossary_terms 表
+    host: localhost
+    port: 5432
+    dbname: yayan_voiceprint
+    user: yayan
+    password_env: YAYAN_VP_DB_PASSWORD
+    password_default: ""
+
+# V5.0 M5：多聲道分離工具（純獨立工具，不碰任何模型/推論邏輯）
+tools:
+  enable_channel_split: false      # ★ 預設 false：不顯示「聲道分離」分頁，行為與既有版本相同
+  # AI 問答分頁：與翻譯共用同一個 LLM，不另外載模型。
+  enable_ai_chat: false            # ★ 預設 false：不顯示「AI 問答」分頁，行為與既有版本相同
+  ai_chat_max_new_tokens: 1024     # 單次回覆上限
+  ai_chat_context_chars: 3000      # 帶入轉錄結果的字數上限（原文、譯文各半）
+  ai_chat_history_chars: 2500      # 保留的歷史對話字數上限（超過就捨棄最舊的）
+  ai_chat_question_chars: 2000     # 單次提問的字數上限（超過只取頭尾）
+  # 串流回覆。⚠️ llama.cpp server 預設會在收到新請求（例如翻譯的下一批）時中斷串流中的回覆；
+  # 只有 server 端已關閉 interrupt_requests 時才可開。
+  ai_chat_stream: false
+
+postprocess:
+  use_opencc: true
+  opencc_config: s2twp.json
+
+server:
+  host: 127.0.0.1          # 只聽 localhost：外部一律走 Nginx 443 HTTPS，封死 7860 直連
+  port: 7860
+  share: false
+  show_internal_names: false
+
+batch:
+  watch_input: true
+  poll_interval_seconds: 5
+  parallel_workers: 1
+  output_format: txt
+  delete_after_process: false
+
+logging:
+  # 用量紀錄：每次轉錄／問答寫一行 JSON 摘要（長度、語種、段數、耗時、失敗數）。
+  # 只記統計數字，不記檔名與任何文字內容。★ 預設空字串：不寫。例：/data/yayan_logs/usage.jsonl
+  usage_log_path: ""
+  level: INFO
+  redact_internal_names: true

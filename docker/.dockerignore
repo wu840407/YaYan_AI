@@ -1,0 +1,25 @@
+.git/
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+.env
+.venv/
+venv/
+.vscode/
+.idea/
+
+# 不要把模型打進 image，用 volume 掛
+models_cache/
+ai_models/
+input_audio/
+output_text/
+offline_packages/
+*.safetensors
+*.bin
+*.pt
+*.engine
+*.onnx
+
+docker/yayan-ai-*.tar

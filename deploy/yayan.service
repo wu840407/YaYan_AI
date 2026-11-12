@@ -1,0 +1,47 @@
+[Unit]
+Description=YaYan-AI v4.6 Multilingual ASR + Translation Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=administrator
+Group=administrator
+WorkingDirectory=/data/AI_Project
+
+# 路徑與環境
+Environment="PATH=/home/administrator/miniconda3/envs/yayan/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="HOME=/home/administrator"
+Environment="HF_HUB_OFFLINE=1"
+Environment="TRANSFORMERS_OFFLINE=1"
+Environment="HF_DATASETS_OFFLINE=1"
+Environment="MODELSCOPE_OFFLINE=1"
+Environment="GRADIO_ANALYTICS_ENABLED=False"
+Environment="GRADIO_DO_NOT_TRACK=1"
+Environment="DO_NOT_TRACK=1"
+Environment="PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
+Environment="CUDA_VISIBLE_DEVICES=0,1"
+
+# 用 conda env 的 python 跑
+ExecStart=/bin/bash -c 'source /home/administrator/miniconda3/etc/profile.d/conda.sh && conda activate yayan && bash /data/AI_Project/scripts/start_server.sh'
+
+# 重啟政策
+Restart=on-failure
+RestartSec=30
+StartLimitInterval=600
+StartLimitBurst=3
+
+# log
+StandardOutput=append:/data/yayan_logs/yayan.log
+StandardError=append:/data/yayan_logs/yayan.err
+
+# 資源限制
+LimitNOFILE=65536
+LimitMEMLOCK=infinity
+
+# 給 30 秒讓 LLM 模型載入完
+TimeoutStartSec=300
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

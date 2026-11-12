@@ -1,0 +1,59 @@
+# YaYan-AI V5.1 — llama.cpp LLM 推論服務（範本）
+#
+# 用途：以 OpenAI 相容協定提供翻譯/潤飾用的 LLM，供 yayan.service 透過
+#       configs/default.yaml 的 llm.openai_base_url 連線。
+# 安裝：sudo cp deploy/yayan-llm.service /etc/systemd/system/
+#       sudo systemctl daemon-reload && sudo systemctl enable --now yayan-llm
+#
+# 本檔是範本，路徑/使用者請依實際環境調整。
+# 啟用 llm.backend=openai 時，yayan.service 依賴本服務；本服務未 ready 前
+# 正式翻譯功能不可用。
+
+[Unit]
+Description=YaYan-AI LLM Inference Server (llama.cpp, OpenAI-compatible)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=administrator
+Group=administrator
+WorkingDirectory=/data/AI_Project
+
+# 只讓本服務看到 LLM 那張卡（ASR 用另一張，避免互搶記憶體）
+Environment="CUDA_VISIBLE_DEVICES=1"
+
+# llama-cpp-python 的 wheel 只帶 libllama/libggml，不帶 CUDA runtime；
+# 這兩個路徑是 pip 版 nvidia 套件提供的 libcudart / libcublas，缺了會起不來。
+Environment="LD_LIBRARY_PATH=/home/administrator/miniconda3/envs/yayan-llama/lib/python3.10/site-packages/nvidia/cuda_runtime/lib:/home/administrator/miniconda3/envs/yayan-llama/lib/python3.10/site-packages/nvidia/cublas/lib"
+
+Environment="HOME=/home/administrator"
+Environment="HF_HUB_OFFLINE=1"
+Environment="TRANSFORMERS_OFFLINE=1"
+
+# ★ --chat_template_kwargs 必須保留：GGUF 內嵌的 chat template 預設會在 prompt
+#   尾端開一個 <think>，模型會把整段思考過程當成正文吐出來，而且因為標籤在
+#   prompt 裡不在輸出裡，下游完全濾不掉。拿掉這個旗標＝翻譯結果會夾雜思考文字。
+ExecStart=/home/administrator/miniconda3/envs/yayan-llama/bin/python -m llama_cpp.server \
+  --model /data/ai_models/YaYan_Reasoner_27B_GGUF_v38/Qwen3.8-27B-UD-Q4_K_M.gguf \
+  --n_gpu_layers -1 \
+  --n_ctx 8192 \
+  --host 127.0.0.1 \
+  --port 8001 \
+  --chat_template_kwargs '{"enable_thinking": false}'
+
+Restart=on-failure
+RestartSec=30
+
+StandardOutput=append:/data/yayan_logs/yayan-llm.log
+StandardError=append:/data/yayan_logs/yayan-llm.err
+
+LimitNOFILE=65536
+LimitMEMLOCK=infinity
+
+# 27B Q4_K_M 從磁碟載入約需 1–2 分鐘
+TimeoutStartSec=600
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target

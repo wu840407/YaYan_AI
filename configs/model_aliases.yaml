@@ -1,0 +1,94 @@
+# YaYan-AI 模型別名對照表
+models:
+  # ============= LLM =============
+  YaYan_Reasoner:
+    real_id: Qwen/Qwen3-14B
+    local_dir: YaYan_Reasoner_14B
+    role: llm_general
+    license: Apache-2.0
+    size_gb: 28
+    quantizable: true
+    note: "BF16 原版，由 bitsandbytes 載入時做 NF4 4-bit 量化"
+
+  YaYan_Translator:
+    real_id: Qwen/Qwen3-14B
+    local_dir: YaYan_Reasoner_14B
+    role: llm_translate
+    license: Apache-2.0
+    size_gb: 0
+    note: "shares weights with YaYan_Reasoner"
+
+  # ============= ASR =============
+  YaYan_ASR_Dialect:
+    real_id: DataoceanAI/dolphin-small
+    local_dir: YaYan_ASR_Dialect
+    role: asr_chinese_dialects
+    license: Apache-2.0
+    size_gb: 1.6
+    note: "Dolphin-CN-Dialect-Small (22 中文方言 + 40 東方語言)"
+    languages: [zh, cmn, yue, wuu, nan, cdo, hak, hsn, gan, cjy,
+                cmn-sw, cmn-sd, cmn-ne, cmn-zy, cmn-wh, cmn-xa, cmn-lz, cmn-jh,
+                wuu-sz, wuu-nb, wuu-wz, nan-cs, nan-hn,
+                bo, ug, kk, mn, ja, ko]
+
+  YaYan_ASR_Global:
+    real_id: openai/whisper-large-v3
+    local_dir: YaYan_ASR_Global
+    role: asr_global
+    license: MIT
+    size_gb: 3.0
+    note: "Whisper-large-v3 - 99 種語言，含日韓歐美中東東南亞"
+    languages: [ja, ko, fa, ur, ar, hi, en, fr, de, ru, es, th, ms, vi, id]
+
+  YaYan_ASR_Taigi:
+    real_id: MediaTek-Research/Breeze-ASR-26
+    local_dir: YaYan_ASR_Taigi
+    role: asr_taiwanese_hokkien
+    license: Apache-2.0
+    size_gb: 3.0
+    note: "v4.7-C 台語(閩南語/Taigi)專用 ASR。Breeze-ASR-26：whisper-large-v2 微調
+           ~1萬小時台語，輸出漢字，Apache-2.0(離線部署可用)。預設停用
+           (enable_taigi_asr)，離線環境需手動將權重放入 local_dir，缺失自動退回 Dolphin。
+           註：CLAUDE.md 原寫 luigisaetta/whisper-medium-zh-tw 該 repo 不存在且 zh-tw 為
+           台灣國語非台語，已更正。備選 NUTN-KWS/Whisper-Taiwanese-model-v0.5 為 CC-BY-NC，
+           商業/政府用途受限。"
+    languages: [nan, nan-cs, nan-hn]
+
+  # ============= LID =============
+  YaYan_LID:
+    real_id: speechbrain/lang-id-voxlingua107-ecapa
+    local_dir: YaYan_LID
+    role: language_identification
+    license: Apache-2.0
+    size_gb: 0.1
+
+  # ============= VAD（pip 內建）=============
+  YaYan_VAD:
+    real_id: snakers4/silero-vad
+    local_dir: YaYan_VAD
+    role: voice_activity_detection
+    license: MIT
+    size_gb: 0.005
+    note: "pip-bundled, no local_dir download needed"
+
+  # ============= Diarization 三件套 =============
+  YaYan_Diarize:
+    real_id: pyannote/speaker-diarization-3.1
+    local_dir: YaYan_Diarize
+    role: speaker_diarization_pipeline
+    license: MIT
+    size_gb: 0.01
+
+  YaYan_Diarize_Seg:
+    real_id: pyannote/segmentation-3.0
+    local_dir: YaYan_Diarize_Seg
+    role: speaker_diarization_segmentation
+    license: MIT
+    size_gb: 0.006
+
+  YaYan_Diarize_Embed:
+    real_id: pyannote/wespeaker-voxceleb-resnet34-LM
+    local_dir: YaYan_Diarize_Embed
+    role: speaker_diarization_embedding
+    license: CC-BY-4.0
+    size_gb: 0.028

@@ -1,0 +1,53 @@
+services:
+  yayan-server:
+    image: yayan-ai:4.5
+    container_name: yayan-server
+    restart: unless-stopped
+    ports:
+      - "7860:7860"
+    environment:
+      YAYAN_MODELS_ROOT: /data/ai_models
+      YAYAN_INPUT_DIR: /data/input_audio
+      YAYAN_OUTPUT_DIR: /data/output_text
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    volumes:
+      - /data/ai_models:/data/ai_models:ro
+      - /data/input_audio:/data/input_audio
+      - /data/output_text:/data/output_text
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  yayan-batch:
+    image: yayan-ai:4.5
+    container_name: yayan-batch
+    restart: unless-stopped
+    command: ["python", "auto_batch_rtx6000.py", "--watch"]
+    environment:
+      YAYAN_MODELS_ROOT: /data/ai_models
+      YAYAN_INPUT_DIR: /data/input_audio
+      YAYAN_OUTPUT_DIR: /data/output_text
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    volumes:
+      - /data/ai_models:/data/ai_models:ro
+      - /data/input_audio:/data/input_audio
+      - /data/output_text:/data/output_text
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    profiles: ["batch"]

@@ -1,0 +1,82 @@
+# YaYan-AI — Quadro RTX 6000 (Turing) 相容
+# CUDA 12.1+ / Python 3.10 / Ubuntu 24.04
+#
+# ⚠️ 本檔是「直接相依 + 版本範圍」，**不足以重現正式環境**。
+#    要一模一樣的環境（例如搬機、lift-and-shift）請用 requirements.lock.txt：
+#        pip install -r requirements.lock.txt
+#    本檔最後更新 2026-09-21（v5.2.1）。
+
+# ---------- 核心 PyTorch ----------
+torch>=2.3.0,<2.6.0
+torchaudio>=2.3.0,<2.6.0
+
+# ---------- numpy 鎖 1.x（vllm 0.6.x / outlines / pyannote 都不支援 2.x）----------
+numpy>=1.26,<2.0
+
+# ---------- HuggingFace 生態 ----------
+# Qwen3 需要 transformers>=4.51.0
+transformers>=4.51.0,<4.57.0
+# huggingface_hub 1.0 移除 HfFolder / 舊 API，gradio 4.x 還在用，必須鎖 <1.0
+huggingface_hub>=0.25.0,<1.0
+accelerate>=0.34.0
+bitsandbytes>=0.43.0
+safetensors>=0.4.5
+sentencepiece>=0.2.0
+protobuf>=4.25,<5.0
+tokenizers>=0.20.0
+
+# ---------- AWQ / vLLM：Turing (sm_75) 都不可用，已停用 ----------
+# 兩者都需要 triton 3.0+，與本機鎖定的 triton 2.3.1 衝突。
+# 現行 LLM 後端是 llama.cpp（獨立 env `yayan-llama` + yayan-llm.service），
+# 走 OpenAI 相容 API，不在本檔的相依範圍內。
+# 換到 Hopper 世代（sm_90）的 GPU 後這兩項的物理限制才解除。
+# autoawq==0.2.7.post3
+# vllm==0.6.4.post1
+# openai>=1.40.0
+
+# ---------- ASR ----------
+funasr>=1.1.0
+modelscope>=1.20.0
+openai-whisper>=20240930
+
+# ---------- 音訊前處理 ----------
+librosa>=0.10.2
+soundfile>=0.12.1
+scipy>=1.11.0
+pydub>=0.25.1
+ffmpeg-python>=0.2.0
+
+# ---------- VAD / LID / Diarization ----------
+silero-vad>=5.1
+speechbrain>=1.0.0
+pyannote.audio>=3.1.0,<4.0
+pyannote.pipeline>=3.0
+pyannote.metrics>=3.2
+
+# ---------- 方言 LID backend（v5.2.0，asr.lid_backend: firered 時必需）----------
+# 這四個是 FireRedASR2S 推論程式碼的相依。少了它們，lid_backend=firered
+# 會在載入時失敗（模組本身是延後載入，import app 不會炸，但一轉錄就退回 auto）。
+# ⚠️ kaldiio 早於 v5.2 就已存在且為 2.18.1；FireRedASR2S 的 requirements 寫 ==2.18.0
+#    會把它**降版**，實測保留 2.18.1 正常，不要照抄上游的 pin。
+cn2an>=0.5.23
+kaldi-native-fbank>=1.15
+kaldiio>=2.18.1
+proces>=0.1.7
+
+# ---------- 聲紋 / 術語庫資料庫（M2 / M3）----------
+psycopg2-binary>=2.9.9
+
+# ---------- 正體中文 ----------
+opencc-python-reimplemented>=0.1.7
+
+# ---------- 介面 ----------
+gradio>=4.40.0,<5.0.0
+
+# ---------- 自動化 ----------
+watchdog>=4.0.0
+
+# ---------- 工具 ----------
+pyyaml>=6.0
+tqdm>=4.66.0
+requests>=2.32.0
+python-dotenv>=1.0.0
