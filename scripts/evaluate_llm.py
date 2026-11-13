@@ -17,8 +17,8 @@
 用法（兩個 endpoint 都要是 OpenAI 相容）：
     python scripts/evaluate_llm.py \\
         --endpoint http://127.0.0.1:8001/v1 --name qwen3.6 \\
-        --manifest /data/ai_datasets/evalsets/llm_manifest.jsonl \\
-        --out .claude/scratch/$(date +%F)-llm-qwen36.json
+        --manifest /path/to/llm_manifest.jsonl \\
+        --out results/$(date +%F)-llm-qwen36.json
 
 manifest 每行：{"raw_text": "[A方 00:01-00:05] 逐字稿…", "source_language": "zh",
                "terms": ["應保留的術語"]}   # terms 選填

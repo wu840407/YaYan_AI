@@ -6,20 +6,19 @@
 
 用法：
     conda run --no-capture-output -n yayan python scripts/evaluate_asr.py \\
-        --manifest /data/ai_datasets/eval/manifest.jsonl \\
+        --manifest /path/to/manifest.jsonl \\
         --language auto \\
-        --out .claude/scratch/$(date +%F)-eval.json
+        --out results/$(date +%F)-eval.json
 
 manifest 格式（每行一個 JSON）：
     {"audio": "/abs/path.wav",       # 必填
      "text": "參考逐字稿",             # 算 CER 用；沒有就只跑 LID
      "dialect": "nan",               # 人工方言標籤（routing key）；沒有就不做混淆矩陣
-     "words": [{"start": 0.5, "end": 0.7, "text": "你"}]}   # 選填，算時間戳誤差
-
+     "words": [{"start": 0.5, "end": 0.7, "text": "你"}],   # 選填，算時間戳誤差
      "group": "cmn-fleurs"}          # 選填，報表分組名稱（沒有就用 dialect）
 
-⚠️ 標籤品質決定一切：2026-08-24 的教訓是 /data/ai_datasets/own/raw 有 3 個檔內容與檔名不符，
-   一度得出「台語只有 20%」的錯誤結論。用新評測集前先用 scripts/review_annotations.py 抽聽。
+⚠️ 標籤品質決定一切：曾有樣本的實際內容與檔名標示的語言不符，差點因此得出錯誤結論。
+   用新評測集前先用 scripts/review_annotations.py 抽聽。
 
 評測用選項（皆選填；不加時行為與舊版相同）：
     --set asr.lid_backend=voxlingua   只在本行程內覆寫設定，不改設定檔（可重複）
