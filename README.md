@@ -191,6 +191,84 @@ Corpora and licenses: FLEURS (CC-BY 4.0), Common Voice 22 (CC-0), MagicHub diale
 conversations (CC-BY-NC-ND 4.0), AISHELL-4 (CC-BY-SA 4.0). Evaluation scripts:
 `scripts/evaluate_asr.py`, `scripts/evaluate_llm.py`.
 
+## Version history
+
+Every feature below ships behind a config switch; the repo defaults stay conservative
+and a deployment turns features on after validating them.
+
+**Since v5.4.0** (current `master`, version string still v5.4.0)
+- Failure notices: engine errors (e.g. out-of-memory) are counted and shown in the UI instead of silently returning empty text (`asr.enable_failure_notice`).
+- Repetition guard: cuts ASR decoding loops of 50+ repeated characters; digit read-outs and short replies are left alone (`asr.enable_repetition_guard`).
+- Usage statistics log with counts and timings only, no transcript text (`logging.usage_log_path`).
+- Fixed log output: after importing the app, third-party packages had silenced YaYan's own INFO/WARNING logs.
+- Whole-recording language prior: per-segment language ID is corrected using evidence from the whole recording (`asr.lid_call_prior`).
+- Evaluation tooling: end-to-end speech-to-text evaluation, an annotation listening tool, in-process config overrides, ASR-only mode and GPU-sharing guards for `scripts/evaluate_asr.py`.
+- Prompts can be overridden per deployment from `configs/local/prompts/` (not tracked by git).
+- README: Performance rewritten with public-corpus measurements; pipeline diagram matches the deployed routing.
+
+**v5.4.0** (2026-10-05)
+- Optional "AI Q&A" tab using the same local LLM: ask questions, or summarize the current transcript (`tools.enable_ai_chat`). Non-streaming by default and queued with transcription jobs, so replies are not cut off by other requests.
+- Experimental two-step dialect LID rescue (`asr.firered_lid_rescue`, off; not recommended — see Features).
+- UI and documentation wording updated.
+
+**v5.3.1** (2026-09-21)
+- LLM switched to Qwen3.8-27B (GGUF Q4_K_M, llama.cpp).
+- LLM-normalization evaluation script (`scripts/evaluate_llm.py`).
+- Fixed the page hanging on load caused by an empty speaker table.
+
+**v5.3.0** (2026-09-21)
+- Speakers found in a transcript can be named and saved directly from the result panel (optional speaker management, off by default).
+- Quality check split into an ASR panel and a translation panel.
+- Removed a duplicate "mixed dialects" option that behaved exactly like auto-detect.
+- Complete dependency list plus an exact lock file (`requirements.lock.txt`).
+
+**v5.2.1** (2026-09-07)
+- UI guidance now recommends auto-detect: the dialect-aware routing only runs in auto mode, and the old help text was steering users away from it.
+- ASR evaluation script: CER, language-ID confusion matrix, timestamp error (`scripts/evaluate_asr.py`).
+
+**v5.2.0** (2026-08-24)
+- Switchable dialect-aware language ID (`asr.lid_backend: firered`) that tells apart Min (Hokkien), Yue, Wu, Xiang and Southwestern Mandarin, so Hokkien in auto mode finally reaches its dedicated ASR. On Common Voice 22 test: Hokkien 94%, Cantonese 92%.
+- Offline fix: the front page no longer requests external web fonts (long first load on air-gapped networks).
+- Cantonese and Tibetan routed to Whisper (`asr.force_whisper_routings`); Dolphin only produced Mandarin for Cantonese.
+- Repaired language ID that had been failing silently (every dialect came back as generic Chinese); a manually chosen language now takes precedence.
+- Removed tokenizer word-boundary markers (`▁`) that leaked into transcripts.
+- Term bank: deterministic post-ASR term replacement (`rag.enable_asr_correction`) and an optional hint for suspected misspelled names.
+- Readability hint when a transcript looks like the wrong language was chosen (`asr.enable_quality_hint`).
+- Startup script supports the llama.cpp backend; RTX 6000 becomes the primary GPU profile.
+
+**v5.1.0** (2026-08-04)
+- LLM backend can be a local llama.cpp server (OpenAI-compatible), enabling a 27B model on Turing GPUs without vLLM.
+- UI wording updated.
+- Port override via `YAYAN_SERVER_PORT`; fixed download failures, speaker search and GPU contention when two jobs start at once.
+
+**v5.0** (2026-06, no release tag)
+- UI shows a single product name, "YaYan", instead of upstream model names.
+- Optional speaker management tab (PostgreSQL + pgvector).
+- Term bank (RAG) for names, places and jargon, injected into the LLM prompt (`rag.enable_rag`).
+- Multi-channel split tool as a separate tab (`tools.enable_channel_split`).
+- The web UI binds to 127.0.0.1 by default (served through a reverse proxy).
+- Deployment scripts provided as templates; Nginx template uses syntax compatible with Nginx 1.24; MIT license.
+
+**v4.7.0** (2026-06-05)
+- Sliding-window LID: each segment borrows 1.5 s of context on either side.
+- LID ensemble: VoxLingua107 and Whisper vote (off by default).
+- Dedicated Taiwanese Hokkien ASR (Breeze-ASR-26), falling back to Dolphin if the weights are missing.
+- Corrected Dolphin region codes for Sichuanese, Cantonese and other dialects.
+
+**v4.6.0** (2026-05-14)
+- Dialect ASR upgraded to Dolphin-CN-Dialect-Small (22 Chinese dialects) with a 22-dialect selector.
+- Per-segment language ID, speaker labels A–E, `[A方 00:01-00:05]`-style timestamps.
+- LLM translation in 30-line batches, fixing truncated output on recordings longer than 20 minutes.
+- Dolphin special tokens stripped from the output.
+
+**v4.5** (2026-05-04)
+- RTX 6000 edition: multi-dialect routing and an editable transcript.
+- LLM backends (transformers / vLLM / OpenAI-compatible) with Qwen3 "thinking" disabled; Qwen3-14B with 4-bit NF4 as the working baseline.
+- Offline pyannote 3.1 diarization loader and an offline-aware deployment toolchain.
+
+**Early versions** (2026-01 to 2026-04)
+- First prototype, pre-processing and RTX 4000 server scripts.
+
 ## Roadmap
 
 - [ ] Larger ASR / LLM models on newer GPUs to lift dialect accuracy
@@ -227,3 +305,21 @@ Whisper large-v3（粵語、藏語、外語）→ Qwen3.8-27B 整理成繁中書
 台語引擎輸出華語譯文，無法用台語漢字參考稿計分，未列入。LLM 階段是書面語整理，不是逐字校正（會讓逐字 CER 上升）。
 語者分離 DER 21.2%（AISHELL-4，5 人上限）。一小時音檔約 24 分鐘。細節見上方 Performance。
 雙 GPU 設定檔：RTX 4000 Ada（`app_rtx4000.py`）／RTX 6000（`app_rtx6000.py`）。
+
+版本歷史（詳見上方 Version history）：
+
+| 版本 | 日期 | 主要內容 |
+|---|---|---|
+| v5.4.0 之後 | 2026-10～11 | 辨識失敗提醒、重複輸出截斷、用量統計、以整段錄音修正逐段語種、評測工具、提示詞本機覆寫 |
+| v5.4.0 | 2026-10-05 | AI 問答分頁、實驗性兩步判定開關（不建議開）、介面與文件用語更新 |
+| v5.3.1 | 2026-09-21 | LLM 換 Qwen3.8-27B、LLM 評測腳本、修正頁面卡在載入 |
+| v5.3.0 | 2026-09-21 | 從轉錄結果直接建立語者、品質檢查分兩欄、相依鎖定檔 |
+| v5.2.1 | 2026-09-07 | 介面改為建議使用自動偵測、ASR 評測腳本 |
+| v5.2.0 | 2026-08-24 | 可切換的方言語種判定（分閩粵吳湘西南官話）、首頁不再向外部取字型、粵語藏語改走 Whisper、修復語種判定失效、術語替換 |
+| v5.1.0 | 2026-08-04 | LLM 可接 llama.cpp、介面用語更新、可指定服務埠、修正下載與 GPU 搶用 |
+| v5.0 | 2026-06 | 介面統一稱雅言、語者管理分頁、術語庫、多聲道分離工具、服務只綁本機、部署範本 |
+| v4.7.0 | 2026-06-05 | 滑動窗口語種判定、判定投票、台語專用 ASR、更正 Dolphin 方言代碼 |
+| v4.6.0 | 2026-05-14 | 22 種方言 ASR、逐段語種判定、A～E 語者標籤、分批翻譯 |
+| v4.5 | 2026-05-04 | 多方言分派、可編輯逐字稿、LLM 後端、離線語者分離 |
+| 早期版本 | 2026-01～04 | 初版原型、前處理、RTX 4000 伺服器腳本 |
+
