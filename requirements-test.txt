@@ -1,0 +1,6 @@
+# Dependencies for the unit tests only (no GPU, no model weights).
+#   pip install -r requirements-test.txt
+#   python -m pytest
+pytest==8.3.4
+PyYAML==6.0.2
+numpy==1.26.4

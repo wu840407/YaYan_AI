@@ -1,5 +1,6 @@
 # YaYan-AI（雅言）
 
+[![tests](https://github.com/wu840407/YaYan_AI/actions/workflows/tests.yml/badge.svg)](https://github.com/wu840407/YaYan_AI/actions/workflows/tests.yml)
 ![Python](https://img.shields.io/badge/python-3.10+-blue)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.3-EE4C2C)
 ![Offline](https://img.shields.io/badge/deployment-100%25_offline-brightgreen)
@@ -116,6 +117,16 @@ bash scripts/start_batch.sh
 
 For fully air-gapped installation, see `scripts/install_offline.sh` and
 `scripts/verify_offline.py`.
+
+### Tests
+
+Unit tests cover the parts that do not need a GPU: the CER and timestamp metrics behind the
+numbers below, engine routing, output clean-up and configuration. CI runs them on every push.
+
+```bash
+pip install -r requirements-test.txt
+python -m pytest
+```
 
 ## Performance
 
